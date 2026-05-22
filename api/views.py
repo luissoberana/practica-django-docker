@@ -45,3 +45,40 @@ def calcular_impuesto_por_pais(codigo_iso, monto, usuario=None):
         "impuesto_calculado": float(impuesto_calculado),
         "total": float(resultado_total)
     }
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from .serializers import CalculoImpuestoInputSerializer, CalculoImpuestoOutputSerializer
+
+class CalcularImpuestoAPIView(APIView):
+    
+    # Este decorador le enseña a Swagger qué datos requiere esta API y qué va a responder
+    @extend_schema(
+        request=CalculoImpuestoInputSerializer,
+        responses={200: CalculoImpuestoOutputSerializer},
+        summary="Calcula el impuesto según el país y registra en el historial"
+    )
+    def post(self, request):
+        # 1. Validamos los datos que nos enviaron por internet usando el serializador
+        serializer = CalculoImpuestoInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Si son válidos, extraemos las variables limpias
+        codigo_iso = serializer.validated_data['codigo_iso']
+        monto = serializer.validated_data['monto']
+        
+        try:
+            # 3. Reutilizamos tu lógica potente que va a Neon y guarda el historial
+            # Pasamos request.user si el usuario está autenticado en el panel, de lo contrario será None (Anónimo)
+            usuario = request.user if request.user.is_authenticated else None
+            resultado = calcular_impuesto_por_pais(codigo_iso, monto, usuario=usuario)
+            
+            # 4. Devolvemos la respuesta exitosa
+            return Response(resultado, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            # Si nuestra lógica arrojó un error (ej: el país no existe), respondemos un error limpio
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
