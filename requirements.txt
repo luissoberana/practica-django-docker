@@ -7,3 +7,7 @@ psycopg2-binary>=2.9
 # Servidor web para producción (lo usaremos después, pero es bueno tenerlo)
 gunicorn>=21.2
 flake8==7.0.0
+
+#Para generar los endpoint para APIREST
+djangorestframework==3.15.1
+drf-spectacular==0.27.2
