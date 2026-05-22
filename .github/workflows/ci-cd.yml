@@ -62,6 +62,11 @@ jobs:
         # '-d' enciende el contenedor en segundo plano de forma silenciosa.
         run: docker compose up -d --build
 
+      # PASO 4: Validación de sintaxis y estilo de código (Linter)
+      - name: 🔍 Validar sintaxis y estilo de código (Linter)
+        # --select=E9,F63,F7,F82 le dice a flake8: "Solo fállame si hay errores fatales, variables fantasmas o código roto"
+        run: docker compose exec -T backend flake8 api/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
       # PASO 4: Ejecución de las reglas de negocio (Tu código de impuestos)
       - name: 🧪 Ejecutar pruebas unitarias
         # Entra al contenedor 'backend' y corre los tests.
