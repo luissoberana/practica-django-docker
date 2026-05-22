@@ -10,22 +10,26 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+import dj_database_url  # Esta librería procesará la base de datos en la nube
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --- CONFIGURACIÓN DINÁMICA DE PRODUCCIÓN ---
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# Detectamos si estamos en Render (en internet). Si la variable 'RENDER' existe, es producción.
+IS_IN_PRODUCTION = 'RENDER' in os.environ
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*fy--%xz(3=$1eazom#5r6&o%wm3nxo-y2k*%pma1!4o-keapi'
+# En internet DEBUG será False (seguro). En tu máquina será True (desarrollo).
+DEBUG = not IS_IN_PRODUCTION
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# En tu máquina acepta localhost; en internet acepta el dominio seguro de Render
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com']
 
-ALLOWED_HOSTS = []
+# Si estamos en internet, exige la clave secreta oculta de Render. Si estás local, usa una genérica.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-local-dev-key-12345')
 
 
 # Application definition
@@ -77,16 +81,27 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+# 4. BASE DE DATOS DINÁMICA
+if IS_IN_PRODUCTION:
+    # En producción, Render nos dará una URL completa de conexión segura
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600
+        )
     }
-}
+else:
+    # Tu configuración local de Neon que ya funcionaba perfectamente
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME'),
+            'USER': os.environ.get('DB_USER'),
+            'PASSWORD': os.environ.get('DB_PASSWORD'),
+            'HOST': os.environ.get('DB_HOST'),
+            'PORT': os.environ.get('DB_PORT'),
+        }
+    }
 
 
 # Password validation
