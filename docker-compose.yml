@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  backend:
+    # Construye la imagen leyendo el Dockerfile que acabamos de crear
+    build: .
+    container_name: backend-practica
+    # Este es el comando oficial de Django para encender el servidor de desarrollo
+    command: python manage.py runserver 0.0.0.0:8000
+    # "Refleja" tu carpeta local dentro del contenedor para que los cambios se vean en tiempo real
+    volumes:
+      - .:/app
+    # Conecta el puerto 8000 de tu computadora con el puerto 8000 del contenedor
+    ports:
+      - "8000:8000"
