@@ -13,3 +13,7 @@ services:
     # Conecta el puerto 8000 de tu computadora con el puerto 8000 del contenedor
     ports:
       - "8000:8000"
+      # ¡LA LÍNEA CLAVE! Le dice a Docker: "Lee el archivo .env e inyecta 
+    # todas las contraseñas y variables dentro de este contenedor"
+    env_file:
+      - .env
