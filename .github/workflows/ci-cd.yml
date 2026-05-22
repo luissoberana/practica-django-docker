@@ -1,0 +1,77 @@
+# ==============================================================================
+# Nombre que aparecerá en grande en la pestaña "Actions" de la página de GitHub
+# ==============================================================================
+name: CI/CD Pipeline - Practica
+
+# ------------------------------------------------------------------------------
+# GATILLO (TRIGGERS): ¿Cuándo se despierta y empieza a trabajar este robot?
+# ------------------------------------------------------------------------------
+on:
+  push:
+    # Solo se ejecutará si el código nuevo se sube a las ramas 'develop' o 'main'.
+    # (Si subes código a una rama llamada 'pruebas', el robot la ignorará).
+    branches: [ "develop", "main" ]
+  
+  # "Botón de emergencia": Nos permite encender el robot manualmente dándole 
+  # clic a un botón en la web de GitHub, sin necesidad de subir código nuevo.
+  workflow_dispatch:
+
+# ------------------------------------------------------------------------------
+# TRABAJOS (JOBS): La lista de tareas principales que el robot debe hacer
+# ------------------------------------------------------------------------------
+jobs:
+  test:
+    # Nombre amigable (con emoji) de la tarea que veremos en la interfaz gráfica
+    name: 🧪 Ejecutar Pruebas
+    
+    # Le pedimos a GitHub que nos preste un servidor gratuito en la nube que 
+    # tenga instalada la última versión de Ubuntu (Linux) para trabajar ahí.
+    runs-on: ubuntu-latest 
+    
+    # --------------------------------------------------------------------------
+    # PASOS (STEPS): La receta paso a paso dentro del servidor que nos prestaron
+    # --------------------------------------------------------------------------
+    steps:
+      
+      # PASO 1: Traer tu código al servidor que actualmente está vacío
+      - name: 📥 Descargar código
+        # Usa una herramienta oficial que hace un "git clone" automático 
+        # para meter tu código dentro de este servidor prestado.
+        uses: actions/checkout@v4
+
+      # PASO 2: Seguridad y configuración de conexión a la base de datos
+      - name: 📄 Crear .env temporal para el contenedor
+        # El símbolo "|" significa que le vamos a dictar varios comandos de consola
+        run: |
+          # 'echo ... >' crea el archivo .env y le mete la primera línea
+          echo "DEBUG=True" > .env
+          
+          # '>>' añade una nueva línea sin borrar la anterior.
+          # '${{ secrets.ALGO }}' viaja a la configuración secreta de tu GitHub,
+          # saca la contraseña real y la pega aquí de forma invisible y segura.
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=5432" >> .env
+
+      # PASO 3: Construcción de la infraestructura (Docker)
+      - name: 🐳 Levantar contenedor de pruebas
+        # Ejecuta el mismo comando que usas en tu PC. 
+        # '-d' enciende el contenedor en segundo plano de forma silenciosa.
+        run: docker compose up -d --build
+
+      # PASO 4: Ejecución de las reglas de negocio (Tu código de impuestos)
+      - name: 🧪 Ejecutar pruebas unitarias
+        # Entra al contenedor 'backend' y corre los tests.
+        # '-T' le avisa a Docker que esto lo ejecuta una máquina y no un humano, 
+        # así que no debe intentar abrir una consola interactiva.
+        # '--keepdb' evita que choque con Neon al intentar borrar la base de datos temporal.
+        run: docker compose exec -T backend python manage.py test --keepdb
+
+      # PASO 5: Cortesía y limpieza
+      - name: 🧹 Limpiar entorno
+        # Apaga y destruye el contenedor y elimina cualquier volumen ('-v') 
+        # para devolverle a GitHub el servidor prestado totalmente limpio.
+        run: docker compose down -v
