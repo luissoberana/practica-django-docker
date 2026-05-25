@@ -19,3 +19,6 @@ class SolicitudImpuestoAdmin(admin.ModelAdmin):
     list_filter = ('pais', 'fecha_creacion')
     # Hacer que todo el historial sea de "Solo Lectura" (un administrador no debería alterar el historial)
     readonly_fields = ('usuario', 'pais', 'monto_original', 'impuesto_calculado', 'resultado_total', 'fecha_creacion')
+
+from .models import Moneda # O el nombre de tu nuevo modelo
+admin.site.register(Moneda)

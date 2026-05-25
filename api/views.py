@@ -50,6 +50,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
+from django.db import connection 
 from .serializers import CalculoImpuestoInputSerializer, CalculoImpuestoOutputSerializer
 
 class CalcularImpuestoAPIView(APIView):
@@ -82,3 +83,26 @@ class CalcularImpuestoAPIView(APIView):
         except ValueError as e:
             # Si nuestra lógica arrojó un error (ej: el país no existe), respondemos un error limpio
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class RecaudoPaisView(APIView):
+    """
+    Vista que consume el Stored Procedure 'calcular_total_recaudado'
+    para obtener la suma total de impuestos por país directamente desde Neon.
+    """
+    def get(self, request, pais_id):
+        # 1. Abrimos un "túnel" directo a la base de datos
+        with connection.cursor() as cursor:
+            # 2. Ejecutamos el Stored Procedure pasándole el ID del país de forma segura
+            cursor.execute("SELECT calcular_total_recaudado(%s);", [pais_id])
+            
+            # 3. Atrapamos el resultado que escupe Neon
+            resultado = cursor.fetchone()
+            
+            # 4. Limpiamos el dato (si no hay nada, devolvemos 0.00)
+            total = resultado[0] if resultado else 0.00
+            
+        # 5. Devolvemos el JSON bonito para el cliente
+        return Response({
+            "pais_id": pais_id,
+            "total_recaudado": total
+        })
