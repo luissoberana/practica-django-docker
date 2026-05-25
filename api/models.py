@@ -7,7 +7,8 @@ class Pais(models.Model):
     porcentaje_impuesto = models.DecimalField(max_digits=4, decimal_places=2)
 
     def __str__(self):
-        return f"{self.nombre} ({self.porcentaje_impuesto}%)"
+        return f"{self.nombre} ({self.porcentaje_impuesto}%)" # Define como se va a mostrar el país 
+    # en el panel de control de Django Admin
 
 
 # --- NUEVA TABLA: HISTORIAL DE SOLICITUDES ---
@@ -34,3 +35,7 @@ class SolicitudImpuesto(models.Model):
         # Un resumen amigable para el panel de control
         usuario_str = self.usuario.username if self.usuario else "Anónimo"
         return f"Cálculo {self.pais.codigo_iso} por {usuario_str} el {self.fecha_creacion.strftime('%d/%m/%Y')}"
+
+class Moneda(models.Model):
+    nombre = models.CharField(max_length=50) # Ej: "Peso Colombiano"
+    simbolo = models.CharField(max_length=5)  # Ej: "$"

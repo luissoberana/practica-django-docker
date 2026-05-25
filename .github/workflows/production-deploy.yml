@@ -1,0 +1,103 @@
+name: CI/CD Pipeline - Validador de Impuestos Completo (Main)
+
+on:
+  pull_request:
+    types: [closed]  # Solo cuando se hace el merge definitivo de develop a main
+    branches: [main] # Destino: la rama principal
+  workflow_dispatch: # Gatillo manual por si acaso
+
+jobs:
+  pipeline_completo:
+    name: 🛡️ Control de Calidad y Actualización de Base de Datos
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest # Máquina virtual efímera en la nube de GitHub
+
+    env:
+      DEPLOY_PATH: ${{ github.workspace }} # Ruta de trabajo temporal
+      DOCKER_SERVICE_NAME: backend # Tu contenedor del Validador
+
+    steps:
+      # PASO 1: Descargar el código fuente
+      - name: 📥 Descargar código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+# PASO 2: Generar el archivo .env temporal leyendo tus secretos tal cual los tienes en GitHub
+      - name: 📄 Generar .env de Producción
+        run: |
+          set -euo pipefail
+          echo "⚙️ Generando archivo de configuración temporal..."
+          cat > $DEPLOY_PATH/.env << 'ENV_EOF'
+          DJANGO_SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=5432
+          ENV_EOF
+          chmod 600 $DEPLOY_PATH/.env
+
+      # PASO 3: Levantar la infraestructura en la nube de GitHub
+      - name: 🐳 Levantar Contenedor en Entorno Efímero
+        run: |
+          set -euo pipefail
+          cd $DEPLOY_PATH
+          echo "🏗️ Levantando contenedor para auditoría y despliegue..."
+          docker compose up -d --build --force-recreate --remove-orphans
+
+      # PASO 4: Health Check - Esperar a que el entrypoint termine de migrar y poblar Neon
+      - name: 🏥 Verificar Inicialización de la API
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          max_attempts=15
+          attempt=0
+          delay=5
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+            if docker compose logs $DOCKER_SERVICE_NAME | grep -q "🚀 Todo listo. Entregando el control al servidor..."; then
+              echo "✅ El entrypoint terminó con éxito. Base de datos migrada y poblada."
+              exit 0
+            fi
+            sleep $delay
+          done
+          echo "❌ ERROR: El contenedor tardó demasiado en iniciar."
+          docker compose logs $DOCKER_SERVICE_NAME
+          exit 1
+
+      # ===============================================================================================
+      # 🧪 FASE DE CALIDAD (TUS TEST Y TU LINTER ORIGINAL)
+      # ===============================================================================================
+
+      # PASO 5: Pasar el linter Flake8
+      - name: 🔍 Validar sintaxis y estilo de código (Linter)
+        run: |
+          echo "🔍 Ejecutando análisis estático con Flake8..."
+          docker compose exec -T $DOCKER_SERVICE_NAME flake8 api/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # PASO 6: Ejecutar tus pruebas unitarias sobre el entorno ya listo
+      - name: 🧪 Ejecutar pruebas unitarias de Django
+        run: |
+          echo "🧪 Corriendo exámenes automatizados de negocio..."
+          docker compose exec -T $DOCKER_SERVICE_NAME python manage.py test --keepdb
+
+      # ===============================================================================================
+      # 🧹 CIERRE Y DESTRUCCIÓN SEGURA
+      # ===============================================================================================
+
+      # PASO 7: Post-despliegue - Mostrar estadísticas de recursos
+      - name: 📊 Post-deploy verification
+        if: success()
+        run: |
+          echo "📊 Resumen de recursos utilizados:"
+          docker stats --no-stream
+          echo "✅ ===== BASE DE DATOS DE PRODUCCIÓN ACTUALIZADA Y COMPROBADA ====="
+
+      # PASO 8: Limpieza absoluta (Garantía de ciberseguridad)
+      - name: 🧹 Destruir Contenedor y Limpiar Evidencia
+        if: always()
+        run: |
+          echo "🧹 Destruyendo entorno efímero..."
+          docker compose down -v
+          echo "✅ Evidencia eliminada. Proceso seguro."
