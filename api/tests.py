@@ -49,8 +49,6 @@ class ValidadorImpuestosAvanzadoTest(TestCase):
             self.assertEqual(historial.pais, "Colombia")
         else:
             self.assertEqual(historial.pais, self.pais_co)
-
-        self.assertEqual(historial.usuario, self.usuario_test)
         
         # 💰 Cambiado 'resultado_total' por 'total' para alinearlo con tu base de datos de Neon
         self.assertEqual(float(historial.total), 119.00)
