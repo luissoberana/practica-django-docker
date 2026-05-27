@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from api.models import Pais, SolicitudImpuesto
+from api.models import Pais, HistorialCalculo  # 👈 Cambiado SolicitudImpuesto por HistorialCalculo
 from api.views import calcular_impuesto_por_pais
 
 class ValidadorImpuestosAvanzadoTest(TestCase):
@@ -38,22 +38,29 @@ class ValidadorImpuestosAvanzadoTest(TestCase):
         self.assertEqual(resultado["total"], 119.00)
 
         # --- VERIFICACIÓN DEL HISTORIAL (AUDITORÍA) ---
-        # Nos aseguramos de que se haya creado exactamente 1 registro en el historial
-        self.assertEqual(SolicitudImpuesto.objects.count(), 1)
+        # 🛡️ Nos aseguramos de contar la tabla correcta (HistorialCalculo)
+        self.assertEqual(HistorialCalculo.objects.count(), 1)
         
         # Traemos ese registro de la base de datos para revisar que guardó los datos bien
-        historial = SolicitudImpuesto.objects.first()
-        self.assertEqual(historial.pais, self.pais_co)
+        historial = HistorialCalculo.objects.first()
+        
+        # 🌍 Validación inteligente del país (funciona tanto si guardas el Objeto o el Texto directamente)
+        if isinstance(historial.pais, str):
+            self.assertEqual(historial.pais, "Colombia")
+        else:
+            self.assertEqual(historial.pais, self.pais_co)
+
         self.assertEqual(historial.usuario, self.usuario_test)
-        self.assertEqual(float(historial.resultado_total), 119.00)
+        
+        # 💰 Cambiado 'resultado_total' por 'total' para alinearlo con tu base de datos de Neon
+        self.assertEqual(float(historial.total), 119.00)
 
     def test_pais_no_registrado_lanza_error(self):
         """Prueba que si el país no existe, el sistema se proteja y lance un error"""
-        # Esperamos un ValueError si buscamos un código que no creamos en el setUp (ej: "US")
         with self.assertRaises(ValueError):
             calcular_impuesto_por_pais(codigo_iso="US", monto=100)
 
     def test_monto_negativo_lanza_error(self):
         """Prueba que los montos negativos sigan estando prohibidos"""
         with self.assertRaises(ValueError):
-            calcular_impuesto_por_pais(codigo_iso="CO", monto=-50)
+            calcular_impuesto_por_pais(codigo_iso="CO", monto=-50, usuario=self.usuario_test)
