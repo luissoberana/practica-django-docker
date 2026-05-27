@@ -39,3 +39,14 @@ class SolicitudImpuesto(models.Model):
 class Moneda(models.Model):
     nombre = models.CharField(max_length=50) # Ej: "Peso Colombiano"
     simbolo = models.CharField(max_length=5)  # Ej: "$"
+
+class HistorialCalculo(models.Model):
+    pais = models.CharField(max_length=100)  # Guardamos el texto del país como auditoría estática
+    monto_original = models.DecimalField(max_digits=12, decimal_places=2)
+    porcentaje_aplicado = models.DecimalField(max_digits=5, decimal_places=2)
+    impuesto_calculado = models.DecimalField(max_digits=12, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)  # Se llena sola con la fecha y hora exacta
+
+    def __str__(self):
+        return f"Liquidación #{self.id} - {self.pais} (${self.total})"
