@@ -26,7 +26,7 @@ IS_IN_PRODUCTION = 'RENDER' in os.environ
 DEBUG = not IS_IN_PRODUCTION
 
 # En tu máquina acepta localhost; en internet acepta el dominio seguro de Render
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com','backend']
 
 # Si estamos en internet, exige la clave secreta oculta de Render. Si estás local, usa una genérica.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-local-dev-key-12345')
@@ -45,9 +45,11 @@ INSTALLED_APPS = [
     # LIBRERÍAS NUEVAS:
     'rest_framework',
     'drf_spectacular',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # ◄-- TIENE
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -155,4 +157,14 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API para calcular impuestos dinámicos por país y auditoría de consultas.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SERVERS': [
+        {'url': '/api', 'description': 'Entorno Activo (Túnel Dinámico)'},
+    ],
 }
+
+# Agrégalo al final de tu settings.py
+CORS_ALLOW_ALL_ORIGINS = True  # ◄-- Para práctica local, esto abre la puerta directo y sin rodeos
+
+# Al final del archivo, sin tocar nada de arriba:
+if DEBUG:
+    ALLOWED_HOSTS.append('*')
