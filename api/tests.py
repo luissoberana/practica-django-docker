@@ -57,16 +57,3 @@ class ValidadorImpuestosAvanzadoTest(TestCase):
         """Prueba que los montos negativos sigan estando prohibidos"""
         with self.assertRaises(ValueError):
             calcular_impuesto_por_pais(codigo_iso="CO", monto=-50)
-class PipelineChaosTest(TestCase):
-    def test_simulacion_error_logico(self):
-        # Para Visual Studio Code, esto es código Python impecable. No hay errores de sintaxis.
-        # Simulamos que la lógica de tu API calculó mal un impuesto por un decimal.
-        impuesto_calculado = 150.50
-        impuesto_esperado = 150.00
-        
-        # Esta aserción va a matar el pipeline
-        self.assertEqual(
-            impuesto_calculado, 
-            impuesto_esperado, 
-            "CRÍTICO: Fuga de capital detectada. Los impuestos no cuadran."
-        )
