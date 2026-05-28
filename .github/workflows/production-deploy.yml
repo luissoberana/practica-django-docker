@@ -38,15 +38,30 @@ jobs:
           ENV_EOF
           chmod 600 $DEPLOY_PATH/.env
 
-      # PASO 3: Levantar la infraestructura en la nube de GitHub
-      - name: 🐳 Levantar Contenedor en Entorno Efímero
+      # PASO 3: Configurar el motor de compilación avanzado (Buildx)
+      - name: 🐳 Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # PASO 3.1: Compilar la imagen usando el Cache nativo de GitHub (GHA)
+      - name: 🏗️ Compilar Backend con Cache Inteligente
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true # Inyecta la imagen directamente al motor de Docker local
+          tags: validador-backend:latest
+          cache-from: type=gha # Intenta leer el caché guardado en GitHub
+          cache-to: type=gha,mode=max # Si hay cambios, guarda el nuevo caché
+
+      # PASO 3.2: Levantar la infraestructura (Docker Compose detectará que la imagen ya existe y no la compilará otra vez)
+      - name: 🚀 Levantar Contenedores
         run: |
           set -euo pipefail
           cd $DEPLOY_PATH
-          echo "🏗️ Levantando contenedor para auditoría y despliegue..."
-          docker compose up -d --build --force-recreate --remove-orphans
+          echo "🏗️ Levantando servicios con imágenes pre-compiladas..."
+          docker compose up -d --remove-orphans
 
-      # PASO 4: Health Check - Esperar a que el entrypoint termine de migrar y poblar Neon
+      # PASO 4: Health Check (Tu verificación original)
       - name: 🏥 Verificar Inicialización de la API
         timeout-minutes: 3
         run: |
