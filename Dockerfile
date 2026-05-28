@@ -1,5 +1,5 @@
-# 1. Usar la imagen oficial de Python
-FROM python:3.11-slim
+# 1. Base ultra-estable congelada en Debian 12 (Bookworm)
+FROM python:3.11-slim-bookworm
 
 # 2. Configurar variables de entorno para que Python sea rápido
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 # 3. Establecer la carpeta de trabajo dentro del contenedor
 WORKDIR /app
 
-# 4. Instalar las librerías del proyecto
+# 4. Instalar las librerías del proyecto (incluye Playwright de Python)
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -16,13 +16,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # =====================================================================
-# 🛠️ INTEGRACIÓN DEL SCRIPT DE ENTRADA (ENTRYPOINT)
+# 🚀 INSTALACIÓN AUTOMÁTICA DE NAVEGADORES Y DEPENDENCIAS
 # =====================================================================
 COPY entrypoint.sh /entrypoint.sh
-RUN apt-get update && apt-get install -y dos2unix && \
-    dos2unix /entrypoint.sh && \
-    chmod +x /entrypoint.sh && \
-    rm -rf /var/lib/apt/lists/*
+
+# Primero instalamos dos2unix (necesario para el entrypoint).
+# Luego, le decimos a Playwright que descargue Chromium Y que instale 
+# automáticamente las dependencias del sistema exactas que Bookworm necesita.
+RUN apt-get update && apt-get install -y --no-install-recommends dos2unix \
+    && playwright install --with-deps chromium \
+    && dos2unix /entrypoint.sh \
+    && chmod +x /entrypoint.sh \
+    && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/entrypoint.sh"]
 

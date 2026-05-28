@@ -15,3 +15,7 @@ drf-spectacular==0.27.2
 dj-database_url==2.1.0
 gunicorn==22.0.0 
 django-cors-headers==4.3.1
+
+# Pruebas de Extremo a Extremo (E2E)
+playwright==1.44.0
+pytest-playwright==0.5.0
